@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"syscall"
 )
 
@@ -61,22 +62,62 @@ func InitContainer() error {
 	if err := ioutil.WriteFile("/sys/fs/cgroup/cpu/my-container/cpu.cfs_quota_us", []byte("1000\n"), 0644); err != nil {
 		return fmt.Errorf("Cgroups add limit cpu.cfs_quota_us to 1000 failed: %w", err)
 	}
-	// mount
-	if err := syscall.Mount("proc", "/root/rootfs/proc", "proc", uintptr(syscall.MS_NOEXEC|syscall.MS_NOSUID|syscall.MS_NODEV), ""); err != nil {
-		return fmt.Errorf("Proc mount failed: %w", err)
+	// prepare for overlayfs
+	// * `workDir` is needed after kernel 3.18 (It's "overlay", not "overlayfs")
+	// * `workDir` is needed to be empty
+	basePath := "/root/overlayfs"
+	lowerId := "lower"
+	upperId := "upper"
+	workId := "work"
+	mergeId := "merge"
+	lowerDir := filepath.Join(basePath, lowerId)
+	upperDir := filepath.Join(basePath, upperId)
+	workDir := filepath.Join(basePath, workId)
+	mergeDir := filepath.Join(basePath, mergeId)
+	if err := os.RemoveAll(upperDir); err != nil {
+		return fmt.Errorf("Failed to remove a directory of upper part of overlayfs: %w", err)
 	}
-	if err := os.Chdir("/root"); err != nil {
-		return fmt.Errorf("Chdir /root failed: %w", err)
+	if err := os.RemoveAll(workDir); err != nil {
+		return fmt.Errorf("Failed to remove a directory of work part of overlayfs: %w", err)
+	}
+	if err := os.RemoveAll(mergeDir); err != nil {
+		return fmt.Errorf("Failed to remove a directory of merge part of overlayfs: %w", err)
+	}	
+	if err := os.MkdirAll(lowerDir, 0700); err != nil {
+		return fmt.Errorf("Failed to create a directory of lower part of overlayfs: %w", err)
+	}
+	if err := os.MkdirAll(upperDir, 0700); err != nil {
+		return fmt.Errorf("Failed to create a directory of upper part of overlayfs: %w", err)
+	}
+	if err := os.MkdirAll(workDir, 0700); err != nil {
+		return fmt.Errorf("Failed to create a directory of work part of overlayfs: %w", err)
+	}
+	if err := os.MkdirAll(mergeDir, 0700); err != nil {
+		return fmt.Errorf("Failed to create a directory of merge part of overlayfs: %w", err)
+	}
+	if err := syscall.Mount("proc", filepath.Join(lowerDir, "proc"), "proc", uintptr(syscall.MS_NOEXEC|syscall.MS_NOSUID|syscall.MS_NODEV), ""); err != nil {
+		return fmt.Errorf("Proc mount failed: %w", err)
 	}
 	// pivot_root は親と子のファイルシステムが異なる必要がある
 	// bind mount すると上手くいくのでそうする
-	if err := syscall.Mount("rootfs",  "/root/rootfs", "", syscall.MS_BIND|syscall.MS_REC, ""); err != nil {
-		return fmt.Errorf("Rootfs bind mount failed: %w", err)
+	if err := os.Chdir(basePath); err != nil {
+		return fmt.Errorf("Failed to chdir to %s: %w", basePath, err)
 	}
-	if err := os.MkdirAll("/root/rootfs/oldrootfs", 0700); err != nil {
-		return fmt.Errorf("Oldrootfs create failed: %w", err)
+	if err := syscall.Mount(lowerId,  lowerDir, "", syscall.MS_BIND|syscall.MS_REC, ""); err != nil {
+		return fmt.Errorf("Rootfs bind mount failed for lower dir of overlayfs: %w", err)
 	}
-	if err := syscall.PivotRoot("rootfs", "/root/rootfs/oldrootfs"); err != nil {
+	if err := os.MkdirAll(filepath.Join(lowerDir, "oldrootfs"), 0700); err != nil {
+		return fmt.Errorf("Oldrootfs create failed for lower dir of overlayfs: %w", err)
+	}
+	opts := fmt.Sprintf("lowerdir=%s,upperdir=%s,workdir=%s", lowerDir, upperDir, workDir)
+	if err := syscall.Mount("overlay", mergeDir, "overlay", 0, opts); err != nil {
+		return fmt.Errorf("Failed to mount overlayfs: %w", err)
+	}
+	// pivot_root
+	if err := os.Chdir(basePath); err != nil {
+		return fmt.Errorf("Chdir %s failed: %w", basePath, err)
+	}
+	if err := syscall.PivotRoot(mergeId, filepath.Join(mergeDir, "oldrootfs")); err != nil {
 		return fmt.Errorf("PivotRoot failed: %w", err)
 	}
 	// pivot_root する前のファイルシステムが /oldrootfs から参照できてしまうのでできなくする
@@ -86,7 +127,6 @@ func InitContainer() error {
 	if err := os.RemoveAll("/oldrootfs"); err != nil {
 		return fmt.Errorf("Remove oldrootfs failed: %w", err)
 	}
-	// initial settings
 	if err := os.Chdir("/"); err != nil {
 		return fmt.Errorf("Chdir failed: %w", err)
 	}
