@@ -40,7 +40,7 @@ A toy container which uses overlayfs. **This is only a TOY container!** The orig
 
 After running a container:
 
-```sh
+```sh-session
 $ sudo go run main.go run
 # ls
 bin  lib  lib64  proc
