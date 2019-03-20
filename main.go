@@ -63,7 +63,7 @@ func InitContainer() error {
 	checkErr(os.MkdirAll("/sys/fs/cgroup/cpu/my-container", 0700), "Failed to create cgroups' namespace 'my-container'")
 	checkErr(ioutil.WriteFile("/sys/fs/cgroup/cpu/my-container/tasks", []byte(fmt.Sprintf("%d\n", os.Getpid())), 0644), "Failed to register cgroups' tasks to my-container namespace")
 	checkErr(ioutil.WriteFile("/sys/fs/cgroup/cpu/my-container/cpu.cfs_quota_us", []byte("1000\n"), 0644), "Failed to add cgroups limit cpu.cfs_quota_us to 1000")
-	// prepare for overlayfs
+	// Prepare for overlayfs
 	// * `workDir` is needed after kernel 3.18 (It's "overlay", not "overlayfs")
 	// * `workDir` is needed to be empty
 	basePath := "/root/overlayfs"
@@ -82,12 +82,12 @@ func InitContainer() error {
 	checkErr(os.MkdirAll(upperDir, 0700), "Failed to create upperdir of overlayfs")
 	checkErr(os.MkdirAll(workDir, 0700), "Failed to create workdir of overlayfs")
 	checkErr(os.MkdirAll(mergedDir, 0700), "Failed to create mergeddir of overlayfs")
-	// mount proc for PID namespace
+	// Mount proc for PID namespace
 	checkErr(os.MkdirAll(filepath.Join(lowerDir, "proc"), 0700), "Failed to create lowerdir/proc")
 	flags := uintptr(syscall.MS_NOEXEC | syscall.MS_NOSUID | syscall.MS_NODEV)
 	checkErr(syscall.Mount("proc", filepath.Join(lowerDir, "proc"), "proc", flags, ""), "Failed to mount proc")
-	// pivot_root は親と子のファイルシステムが異なる必要がある
-	// bind mount すると上手くいくのでそうする
+	// It's needed for pivot_root that a filesystem of parent is different from that of child.
+	// To achieve that, we can use bind mount.
 	checkErr(os.Chdir(basePath), "Failed to chdir to "+basePath)
 	checkErr(syscall.Mount(lowerId, lowerDir, "", syscall.MS_BIND|syscall.MS_REC, ""), "Failed to bind-mount the lowerdir of overlayfs as rootfs")
 	checkErr(os.MkdirAll(filepath.Join(lowerDir, "oldrootfs"), 0700), "Failed to create oldrootfs in the lowerdir of overlayfs")
@@ -96,7 +96,7 @@ func InitContainer() error {
 	// pivot_root
 	checkErr(os.Chdir(basePath), "Failed to chdir to "+basePath)
 	checkErr(syscall.PivotRoot(mergedId, filepath.Join(mergedDir, "oldrootfs")), "Failed to pivot_root")
-	// pivot_root する前のファイルシステムが /oldrootfs から参照できてしまうのでできなくする
+	// Disable /oldrootfs, which points to the filesystem before pivotting the root.
 	checkErr(syscall.Unmount("/oldrootfs", syscall.MNT_DETACH), "Failed to unmount oldrootfs")
 	checkErr(os.RemoveAll("/oldrootfs"), "Failed to remove oldrootfs")
 	checkErr(os.Chdir("/"), "Failed to chdir to /")
