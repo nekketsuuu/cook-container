@@ -12,6 +12,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// Run clones the initial process as the root user.
 func Run() {
 	cmd := exec.Command("/proc/self/exe", "init")
 	cmd.SysProcAttr = &syscall.SysProcAttr{
@@ -49,6 +50,7 @@ func Run() {
 	os.Exit(0)
 }
 
+// Little helper function to handle errors.
 func checkErr(err error, mes string) {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %+v\n", errors.Wrap(err, mes))
@@ -56,6 +58,7 @@ func checkErr(err error, mes string) {
 	}
 }
 
+// InitContainer makes a container environment isolated from the host environment
 func InitContainer() error {
 	// UTS namespace
 	checkErr(syscall.Sethostname([]byte("container")), "Failed to set hostname")
@@ -104,6 +107,7 @@ func InitContainer() error {
 	return nil
 }
 
+// Usage outputs the usage of this command instantly.
 func Usage() {
 	fmt.Fprintf(os.Stderr, "Usage: %s run\n", os.Args[0])
 	os.Exit(2)
