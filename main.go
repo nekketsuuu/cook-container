@@ -58,7 +58,7 @@ func checkErr(err error, mes string) {
 	}
 }
 
-// InitContainer makes a container environment isolated from the host environment
+// InitContainer makes a container environment isolated from the host environment.
 func InitContainer() {
 	// UTS namespace
 	checkErr(syscall.Sethostname([]byte("container")), "Failed to set hostname")
@@ -86,7 +86,7 @@ func InitContainer() {
 	checkErr(os.MkdirAll(workDir, 0700), "Failed to create workdir of overlayfs")
 	checkErr(os.MkdirAll(mergedDir, 0700), "Failed to create mergeddir of overlayfs")
 	// Mount proc for PID namespace
-	checkErr(os.MkdirAll(filepath.Join(lowerDir, "proc"), 0700), "Failed to create lowerdir/proc")
+	checkErr(os.MkdirAll(filepath.Join(lowerDir, "proc"), 0700), "Failed to create "+lowerID+"/proc")
 	flags := uintptr(syscall.MS_NOEXEC | syscall.MS_NOSUID | syscall.MS_NODEV)
 	checkErr(syscall.Mount("proc", filepath.Join(lowerDir, "proc"), "proc", flags, ""), "Failed to mount proc")
 	// It's needed for pivot_root that a filesystem of parent is different from that of child.
