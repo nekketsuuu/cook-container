@@ -59,7 +59,7 @@ func checkErr(err error, mes string) {
 }
 
 // InitContainer makes a container environment isolated from the host environment
-func InitContainer() error {
+func InitContainer() {
 	// UTS namespace
 	checkErr(syscall.Sethostname([]byte("container")), "Failed to set hostname")
 	// cgroups
@@ -104,7 +104,6 @@ func InitContainer() error {
 	checkErr(os.RemoveAll("/oldrootfs"), "Failed to remove oldrootfs")
 	checkErr(os.Chdir("/"), "Failed to chdir to /")
 	checkErr(syscall.Exec("/bin/sh", []string{"/bin/sh"}, os.Environ()), "Failed to exec shell; Does /root/overlayfs/lower/bin/sh exist?")
-	return nil
 }
 
 // Usage outputs the usage of this command instantly.
@@ -121,10 +120,7 @@ func main() {
 	case "run":
 		Run()
 	case "init":
-		if err := InitContainer(); err != nil {
-			fmt.Fprintf(os.Stderr, "%+v\n", err)
-			os.Exit(1)
-		}
+		InitContainer()
 		os.Exit(0)
 	default:
 		Usage()
