@@ -64,7 +64,7 @@ bin  lib  lib64  proc
 
 ## License
 
-This source code is originally implemented by [@rrreeeyyy and others][1] and modified by @nekketsuuu. Currently there is no OSS-compatible license for this repository.
+This source code was originally implemented by [@rrreeeyyy and others][1] and modified by @nekketsuuu. Currently there is no OSS-compatible license for this repository.
 
 
   [1]: https://github.com/rrreeeyyy/container-internship
