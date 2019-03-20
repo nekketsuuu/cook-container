@@ -47,9 +47,11 @@ func Run() {
 }
 
 func InitContainer() error {
+	// UTS namespace
 	if err := syscall.Sethostname([]byte("container")); err != nil {
 		return fmt.Errorf("Setting hostname failed: %w", err)
 	}
+	// cgroups
 	if err := os.MkdirAll("/sys/fs/cgroup/cpu/my-container", 0700); err != nil {
 		return fmt.Errorf("Cgroups namespace my-container create failed: %w", err)
 	}
@@ -59,6 +61,7 @@ func InitContainer() error {
 	if err := ioutil.WriteFile("/sys/fs/cgroup/cpu/my-container/cpu.cfs_quota_us", []byte("1000\n"), 0644); err != nil {
 		return fmt.Errorf("Cgroups add limit cpu.cfs_quota_us to 1000 failed: %w", err)
 	}
+	// mount
 	if err := syscall.Mount("proc", "/root/rootfs/proc", "proc", uintptr(syscall.MS_NOEXEC|syscall.MS_NOSUID|syscall.MS_NODEV), ""); err != nil {
 		return fmt.Errorf("Proc mount failed: %w", err)
 	}
@@ -83,6 +86,7 @@ func InitContainer() error {
 	if err := os.RemoveAll("/oldrootfs"); err != nil {
 		return fmt.Errorf("Remove oldrootfs failed: %w", err)
 	}
+	// initial settings
 	if err := os.Chdir("/"); err != nil {
 		return fmt.Errorf("Chdir failed: %w", err)
 	}
