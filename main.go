@@ -95,6 +95,7 @@ func InitContainer() error {
 	if err := os.MkdirAll(mergeDir, 0700); err != nil {
 		return fmt.Errorf("Failed to create a directory of merge part of overlayfs: %w", err)
 	}
+	// mount proc for PID namespace
 	if err := syscall.Mount("proc", filepath.Join(lowerDir, "proc"), "proc", uintptr(syscall.MS_NOEXEC|syscall.MS_NOSUID|syscall.MS_NODEV), ""); err != nil {
 		return fmt.Errorf("Proc mount failed: %w", err)
 	}
