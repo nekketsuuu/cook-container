@@ -70,14 +70,14 @@ func InitContainer() error {
 	// * `workDir` is needed after kernel 3.18 (It's "overlay", not "overlayfs")
 	// * `workDir` is needed to be empty
 	basePath := "/root/overlayfs"
-	lowerId := "lower"
-	upperId := "upper"
-	workId := "work"
-	mergedId := "merged"
-	lowerDir := filepath.Join(basePath, lowerId)
-	upperDir := filepath.Join(basePath, upperId)
-	workDir := filepath.Join(basePath, workId)
-	mergedDir := filepath.Join(basePath, mergedId)
+	lowerID := "lower"
+	upperID := "upper"
+	workID := "work"
+	mergedID := "merged"
+	lowerDir := filepath.Join(basePath, lowerID)
+	upperDir := filepath.Join(basePath, upperID)
+	workDir := filepath.Join(basePath, workID)
+	mergedDir := filepath.Join(basePath, mergedID)
 	checkErr(os.RemoveAll(upperDir), "Failed to remove the upperdir of overlayfs")
 	checkErr(os.RemoveAll(workDir), "Failed to remove the workdir of overlayfs")
 	checkErr(os.RemoveAll(mergedDir), "Failed to remove the mergeddir of overlayfs")
@@ -92,13 +92,13 @@ func InitContainer() error {
 	// It's needed for pivot_root that a filesystem of parent is different from that of child.
 	// To achieve that, we can use bind mount.
 	checkErr(os.Chdir(basePath), "Failed to chdir to "+basePath)
-	checkErr(syscall.Mount(lowerId, lowerDir, "", syscall.MS_BIND|syscall.MS_REC, ""), "Failed to bind-mount the lowerdir of overlayfs as rootfs")
+	checkErr(syscall.Mount(lowerID, lowerDir, "", syscall.MS_BIND|syscall.MS_REC, ""), "Failed to bind-mount the lowerdir of overlayfs as rootfs")
 	checkErr(os.MkdirAll(filepath.Join(lowerDir, "oldrootfs"), 0700), "Failed to create oldrootfs in the lowerdir of overlayfs")
 	opts := fmt.Sprintf("lowerdir=%s,upperdir=%s,workdir=%s", lowerDir, upperDir, workDir)
 	checkErr(syscall.Mount("overlay", mergedDir, "overlay", 0, opts), "Failed to mount overlayfs")
 	// pivot_root
 	checkErr(os.Chdir(basePath), "Failed to chdir to "+basePath)
-	checkErr(syscall.PivotRoot(mergedId, filepath.Join(mergedDir, "oldrootfs")), "Failed to pivot_root")
+	checkErr(syscall.PivotRoot(mergedID, filepath.Join(mergedDir, "oldrootfs")), "Failed to pivot_root")
 	// Disable /oldrootfs, which points to the filesystem before pivotting the root.
 	checkErr(syscall.Unmount("/oldrootfs", syscall.MNT_DETACH), "Failed to unmount oldrootfs")
 	checkErr(os.RemoveAll("/oldrootfs"), "Failed to remove oldrootfs")
