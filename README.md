@@ -1,6 +1,6 @@
 ## What's this?
 
-A toy container which uses overlayfs. **This is only a TOY container!** The original source code of this container was implemented by [@rrreeeyyy and others][1] and modified by @nekketsuuu during Cookpad Spring 1-day Internship 2019.
+A toy container which uses overlayfs. **This is just a TOY container!** The original source code of this container was implemented by [@rrreeeyyy and others][1] and modified by @nekketsuuu during Cookpad Spring 1-day Internship 2019.
 
 ## Prerequisites
 
